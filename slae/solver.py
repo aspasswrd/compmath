@@ -9,20 +9,7 @@ class LinearSystemSolver:
     def __init__(self, coefficients: Sequence[Sequence[float]], rhs: Sequence[float]) -> None:
         matrix = np.asarray(coefficients, dtype=float)
         vector = np.asarray(rhs, dtype=float)
-
-        if matrix.ndim != 2:
-            raise ValueError("Матрица коэффициентов должна быть двумерной.")
-        if vector.ndim != 1:
-            raise ValueError("Вектор правых частей должен быть одномерным.")
-
-        n_rows, n_cols = matrix.shape
-        if n_rows == 0 or n_cols == 0:
-            raise ValueError("Матрица коэффициентов должна быть непустой.")
-        if n_rows != n_cols:
-            raise ValueError("Матрица коэффициентов должна быть квадратной.")
-        if vector.size != n_rows:
-            raise ValueError("Размер вектора правых частей должен совпадать с размером матрицы.")
-
+        
         self._n = n_rows
         self._A = matrix.copy()
         self._b = vector.reshape(n_rows).copy()
