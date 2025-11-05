@@ -1,141 +1,98 @@
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Dict, List, Tuple
 
 from methods import AVAILABLE_METHODS
 from solver import LinearSystemSolver
 
 
-def _read_system_from_input():
-    """Считывает систему Ax = b из стандартного ввода."""
-    try:
-        n = int(input("Введите размер системы (n): ").strip())
-    except ValueError as exc:
-        raise ValueError("Размер системы должен быть целым числом.") from exc
-
-    if n <= 0:
-        raise ValueError("Размер системы должен быть положительным.")
-
-    matrix = []
-    print("Введите матрицу A построчно, элементы через пробел:")
-    for row_idx in range(n):
-        while True:
-            raw = input(f"A[{row_idx}] = ").strip()
-            parts = raw.split()
-            if len(parts) != n:
-                print(f"Нужно ввести ровно {n} чисел. Повторите попытку.")
-                continue
-            try:
-                row = [float(value.replace(",", ".")) for value in parts]
-            except ValueError:
-                print("Не удалось преобразовать ввод в числа. Повторите попытку.")
-                continue
-            matrix.append(row)
-            break
-
-    vector = []
-    print("Введите вектор правых частей b (по одному числу):")
-    for idx in range(n):
-        while True:
-            raw = input(f"b[{idx}] = ").strip()
-            try:
-                value = float(raw.replace(",", "."))
-            except ValueError:
-                print("Не удалось преобразовать ввод в число. Повторите попытку.")
-                continue
-            vector.append(value)
-            break
-
-    return matrix, vector
+def _format_solution(values: List[float]) -> None:
+    for idx, value in enumerate(values):
+        print(f"  x[{idx}] = {value:.10f}")
 
 
-def _ask_method() -> str:
-    """Возвращает выбранный пользователем метод решения."""
-    print("Доступные методы:")
-    for key, desc in AVAILABLE_METHODS.items():
-        print(f" - {key}: {desc}")
-
-    while True:
-        choice = input("Выберите метод [lu]: ").strip().lower()
-        if not choice:
-            return "lu"
-        if choice in AVAILABLE_METHODS:
-            return choice
-        print("Метод не распознан. Повторите попытку.")
-
-
-def _ask_optional_float(prompt: str, default: float | None) -> float | None:
-    while True:
-        raw = input(prompt).strip()
-        if not raw:
-            return default
+def _run_case(label: str, system: Tuple[List[List[float]], List[float]], plan: List[Tuple[str, Dict]]) -> None:
+    A, b = system
+    solver = LinearSystemSolver(A, b)
+    print(f"\n=== {label.upper()} ===")
+    for method, params in plan:
+        title = AVAILABLE_METHODS.get(method, method.upper())
         try:
-            return float(raw.replace(",", "."))
-        except ValueError:
-            print("Не удалось преобразовать ввод в число. Повторите попытку.")
-
-
-def _ask_optional_int(prompt: str, default: int) -> int:
-    while True:
-        raw = input(prompt).strip()
-        if not raw:
-            return default
-        try:
-            value = int(raw)
-        except ValueError:
-            print("Не удалось преобразовать ввод в целое число. Повторите попытку.")
-            continue
-        if value <= 0:
-            print("Значение должно быть положительным. Повторите попытку.")
-            continue
-        return value
-
-
-def _collect_method_params(method: str) -> Dict[str, Any]:
-    params: Dict[str, Any] = {}
-
-    if method == "simple":
-        tau = _ask_optional_float("Введите параметр tau (Enter = по умолчанию): ", None)
-        tolerance = _ask_optional_float("Введите точность (tol) [1e-9]: ", 1e-9)
-        max_iterations = _ask_optional_int("Введите максимум итераций [10000]: ", 10_000)
-        if tau is not None:
-            params["tau"] = tau
-        if tolerance is not None:
-            params["tolerance"] = tolerance
-        params["max_iterations"] = max_iterations
-    elif method in {"jacobi", "seidel", "steepest", "cg"}:
-        tolerance = _ask_optional_float("Введите точность (tol) [1e-9]: ", 1e-9)
-        max_iterations = _ask_optional_int("Введите максимум итераций [10000]: ", 10_000)
-        if tolerance is not None:
-            params["tolerance"] = tolerance
-        params["max_iterations"] = max_iterations
-
-    if method in {"steepest", "cg"}:
-        print("Напоминание: требуется симметричная положительно определенная матрица.")
-
-    return params
+            values = solver.solve(method=method, **params)
+            print(f"{title}:")
+            _format_solution(values)
+        except Exception as error:
+            print(f"{title}: ошибка: {error}")
 
 
 def main() -> None:
-    try:
-        A, b = _read_system_from_input()
-    except ValueError as error:
-        print(f"Ошибка ввода: {error}")
-        return
+    cases: Dict[str, Dict] = {
+        "sym_spd_3x3": {
+            "system": (
+                [[4.0, 2.0, -1.0], [2.0, 5.0, 1.0], [-1.0, 1.0, 3.0]],
+                [5.0, 12.0, -1.0],
+            ),
+            "methods": [
+                ("lu", {}),
+                ("simple", {"tolerance": 1e-9, "max_iterations": 20_000}),
+                ("jacobi", {"tolerance": 1e-9, "max_iterations": 20_000}),
+                ("seidel", {"tolerance": 1e-9, "max_iterations": 20_000}),
+                ("steepest", {"tolerance": 1e-9, "max_iterations": 5_000}),
+                ("cg", {"tolerance": 1e-9, "max_iterations": 5_000}),
+            ],
+        },
+        "diag_dom_3x3": {
+            "system": (
+                [[10.0, 2.0, 1.0], [2.0, 8.0, 1.0], [1.0, 1.0, 5.0]],
+                [7.0, 6.0, 5.0],
+            ),
+            "methods": [
+                ("lu", {}),
+                ("simple", {"tolerance": 1e-9, "max_iterations": 15_000}),
+                ("jacobi", {"tolerance": 1e-9, "max_iterations": 15_000}),
+                ("seidel", {"tolerance": 1e-9, "max_iterations": 15_000}),
+                ("steepest", {"tolerance": 1e-9, "max_iterations": 5_000}),
+                ("cg", {"tolerance": 1e-9, "max_iterations": 5_000}),
+            ],
+        },
+        "spd_4x4": {
+            "system": (
+                [[6.0, 2.0, 1.0, 0.5], [2.0, 7.0, 2.0, 1.0], [1.0, 2.0, 5.0, 1.5], [0.5, 1.0, 1.5, 4.0]],
+                [9.0, 8.0, 6.0, 5.0],
+            ),
+            "methods": [
+                ("lu", {}),
+                ("simple", {"tolerance": 1e-9, "max_iterations": 25_000}),
+                ("jacobi", {"tolerance": 1e-9, "max_iterations": 25_000}),
+                ("seidel", {"tolerance": 1e-9, "max_iterations": 25_000}),
+                ("steepest", {"tolerance": 1e-9, "max_iterations": 5_000}),
+                ("cg", {"tolerance": 1e-9, "max_iterations": 5_000}),
+            ],
+        },
+        "spd_5x5": {
+            "system": (
+                [
+                    [9.0, 1.0, 0.0, 0.0, 0.0],
+                    [1.0, 8.0, 1.0, 0.0, 0.0],
+                    [0.0, 1.0, 7.0, 1.0, 0.0],
+                    [0.0, 0.0, 1.0, 6.0, 1.0],
+                    [0.0, 0.0, 0.0, 1.0, 5.0],
+                ],
+                [5.0, 4.0, 3.0, 2.0, 1.0],
+            ),
+            "methods": [
+                ("lu", {}),
+                ("simple", {"tolerance": 1e-9, "max_iterations": 30_000}),
+                ("jacobi", {"tolerance": 1e-9, "max_iterations": 30_000}),
+                ("seidel", {"tolerance": 1e-9, "max_iterations": 30_000}),
+                ("steepest", {"tolerance": 1e-9, "max_iterations": 10_000}),
+                ("cg", {"tolerance": 1e-9, "max_iterations": 10_000}),
+            ],
+        },
+    }
 
-    method = _ask_method()
-    params = _collect_method_params(method)
-    solver = LinearSystemSolver(A, b)
-
-    try:
-        solution = solver.solve(method=method, **params)
-    except (ZeroDivisionError, ValueError, RuntimeError) as error:
-        print(f"Не удалось найти решение методом {method}: {error}")
-        return
-
-    print(f"Решение ({method.upper()}):")
-    for idx, value in enumerate(solution):
-        print(f"x[{idx}] = {value}")
+    for label, data in cases.items():
+        _run_case(label, data["system"], data["methods"])
 
 
 if __name__ == "__main__":

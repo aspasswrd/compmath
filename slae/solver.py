@@ -6,8 +6,6 @@ import numpy as np
 
 
 class LinearSystemSolver:
-    """Численно решает системы линейных уравнений Ax = b."""
-
     def __init__(self, coefficients: Sequence[Sequence[float]], rhs: Sequence[float]) -> None:
         matrix = np.asarray(coefficients, dtype=float)
         vector = np.asarray(rhs, dtype=float)
@@ -30,20 +28,14 @@ class LinearSystemSolver:
         self._b = vector.reshape(n_rows).copy()
 
     def solve(self, method: str = "lu", **kwargs: Any) -> List[float]:
-        """Решает Ax = b выбранным методом."""
         method = method.lower()
         dispatch = {
             "lu": self.solve_lu,
             "simple": self.solve_simple_iterations,
-            "simple_iteration": self.solve_simple_iterations,
-            "simple_iterations": self.solve_simple_iterations,
             "jacobi": self.solve_jacobi,
             "seidel": self.solve_gauss_seidel,
-            "gauss-seidel": self.solve_gauss_seidel,
             "steepest": self.solve_steepest_descent,
-            "steepest_descent": self.solve_steepest_descent,
             "cg": self.solve_conjugate_gradients,
-            "conjugate_gradients": self.solve_conjugate_gradients,
         }
 
         if method not in dispatch:
@@ -53,7 +45,6 @@ class LinearSystemSolver:
         return list(map(float, result))
 
     def solve_lu(self) -> np.ndarray:
-        """Решает систему через LU-разложение."""
         L, U = self._lu_decomposition()
         y = self._forward_substitution(L, self._b)
         x = self._back_substitution(U, y)
@@ -65,7 +56,6 @@ class LinearSystemSolver:
         tolerance: float = 1e-9,
         max_iterations: int = 10_000,
     ) -> np.ndarray:
-        """Решает систему методом простых итераций."""
         if tolerance <= 0:
             raise ValueError("Точность должна быть положительной.")
         if max_iterations <= 0:
@@ -91,7 +81,6 @@ class LinearSystemSolver:
         tolerance: float = 1e-9,
         max_iterations: int = 10_000,
     ) -> np.ndarray:
-        """Метод Якоби (иттерационное диагональное расщепление)."""
         if tolerance <= 0:
             raise ValueError("Точность должна быть положительной.")
         if max_iterations <= 0:
@@ -117,7 +106,6 @@ class LinearSystemSolver:
         tolerance: float = 1e-9,
         max_iterations: int = 10_000,
     ) -> np.ndarray:
-        """Метод Зейделя (Гаусса-Зейделя)."""
         if tolerance <= 0:
             raise ValueError("Точность должна быть положительной.")
         if max_iterations <= 0:
@@ -144,7 +132,6 @@ class LinearSystemSolver:
         tolerance: float = 1e-9,
         max_iterations: int = 10_000,
     ) -> np.ndarray:
-        """Метод наискорейшего спуска для SPD-матриц."""
         self._ensure_spd()
         if tolerance <= 0:
             raise ValueError("Точность должна быть положительной.")
@@ -172,7 +159,6 @@ class LinearSystemSolver:
         tolerance: float = 1e-9,
         max_iterations: int = 10_000,
     ) -> np.ndarray:
-        """Метод сопряженных градиентов для SPD-матриц."""
         self._ensure_spd()
         if tolerance <= 0:
             raise ValueError("Точность должна быть положительной.")
