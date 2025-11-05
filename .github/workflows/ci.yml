@@ -4,6 +4,10 @@ on:
   push:
   pull_request:
 
+defaults:
+  run:
+    working-directory: slae
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -32,5 +36,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: coverage-html
-          path: htmlcov
+          path: slae/htmlcov
           if-no-files-found: error
