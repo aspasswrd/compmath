@@ -3,6 +3,9 @@ from __future__ import annotations
 import os
 from typing import Dict, List
 
+import numpy as np
+from time import perf_counter
+
 os.environ.setdefault("QT_QPA_PLATFORM", "xcb")
 
 from PyQt5 import QtCore, QtGui, QtWidgets
@@ -337,10 +340,32 @@ class SLAEWindow(QtWidgets.QMainWindow):
             params = self._collect_params()
             method = self.method_combo.currentData()
 
-            solver = LinearSystemSolver(matrix, vector)
-            result = solver.solve(method=method, **params)
+            start_numpy = perf_counter()
+            baseline = np.linalg.solve(np.asarray(matrix, dtype=float), np.asarray(vector, dtype=float))
+            numpy_time = perf_counter() - start_numpy
 
-            lines = [f"x[{i}] = {value:.12g}" for i, value in enumerate(result)]
+            solver = LinearSystemSolver(matrix, vector)
+            start_method = perf_counter()
+            result = solver.solve(method=method, **params)
+            method_time = perf_counter() - start_method
+
+            diff = np.abs(baseline - np.asarray(result, dtype=float))
+            title = AVAILABLE_METHODS.get(method, method.upper())
+
+            lines: List[str] = [
+                f"NumPy solve (время: {numpy_time * 1e3:.3f} мс)",
+            ]
+            for idx, value in enumerate(baseline):
+                lines.append(f"  x[{idx}] = {float(value):.10f}")
+
+            lines.append("")
+            lines.append(f"{title} (время: {method_time * 1e3:.3f} мс)")
+            for idx, value in enumerate(result):
+                lines.append(f"  x[{idx}] = {value:.10f}    Δ={diff[idx]:.3e}")
+
+            lines.append("")
+            lines.append(f"Максимальное отклонение: {diff.max():.3e}")
+
             self.result_text.setPlainText("\n".join(lines))
             self.status_label.setText(f"Решение найдено методом {method.upper()}.")
             self.status_label.setStyleSheet("color: #7ed493;")
