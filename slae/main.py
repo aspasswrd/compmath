@@ -3,14 +3,17 @@ from __future__ import annotations
 from typing import Dict, List, Tuple
 
 import numpy as np
+from time import perf_counter
 
 from methods import AVAILABLE_METHODS
 from solver import LinearSystemSolver
 
 
-def _format_solution(values: List[float], reference: np.ndarray | None = None) -> None:
+def _format_solution(values: List[float], reference: np.ndarray | None = None, elapsed: float | None = None) -> None:
+    if elapsed is not None:
+        print(f"    время: {elapsed * 1e3:.3f} мс")
     for idx, value in enumerate(values):
-        line = f"  x[{idx}] = {value:.10f}"
+        line = f"    x[{idx}] = {value:.10f}"
         if reference is not None:
             delta = abs(value - reference[idx])
             line += f"    Δ={delta:.3e}"
@@ -20,16 +23,20 @@ def _format_solution(values: List[float], reference: np.ndarray | None = None) -
 def _run_case(label: str, system: Tuple[List[List[float]], List[float]], plan: List[Tuple[str, Dict]]) -> None:
     A, b = system
     solver = LinearSystemSolver(A, b)
+    start_numpy = perf_counter()
     baseline = np.linalg.solve(np.asarray(A, dtype=float), np.asarray(b, dtype=float))
+    numpy_time = perf_counter() - start_numpy
     print(f"\n=== {label.upper()} ===")
     print("NumPy solve:")
-    _format_solution(list(map(float, baseline)))
+    _format_solution(list(map(float, baseline)), elapsed=numpy_time)
     for method, params in plan:
         title = AVAILABLE_METHODS.get(method, method.upper())
         try:
+            start = perf_counter()
             values = solver.solve(method=method, **params)
+            elapsed = perf_counter() - start
             print(f"{title}:")
-            _format_solution(values, baseline)
+            _format_solution(values, baseline, elapsed)
         except Exception as error:
             print(f"{title}: ошибка: {error}")
 
