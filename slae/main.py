@@ -2,25 +2,34 @@ from __future__ import annotations
 
 from typing import Dict, List, Tuple
 
+import numpy as np
+
 from methods import AVAILABLE_METHODS
 from solver import LinearSystemSolver
 
 
-def _format_solution(values: List[float]) -> None:
+def _format_solution(values: List[float], reference: np.ndarray | None = None) -> None:
     for idx, value in enumerate(values):
-        print(f"  x[{idx}] = {value:.10f}")
+        line = f"  x[{idx}] = {value:.10f}"
+        if reference is not None:
+            delta = abs(value - reference[idx])
+            line += f"    Δ={delta:.3e}"
+        print(line)
 
 
 def _run_case(label: str, system: Tuple[List[List[float]], List[float]], plan: List[Tuple[str, Dict]]) -> None:
     A, b = system
     solver = LinearSystemSolver(A, b)
+    baseline = np.linalg.solve(np.asarray(A, dtype=float), np.asarray(b, dtype=float))
     print(f"\n=== {label.upper()} ===")
+    print("NumPy solve:")
+    _format_solution(list(map(float, baseline)))
     for method, params in plan:
         title = AVAILABLE_METHODS.get(method, method.upper())
         try:
             values = solver.solve(method=method, **params)
             print(f"{title}:")
-            _format_solution(values)
+            _format_solution(values, baseline)
         except Exception as error:
             print(f"{title}: ошибка: {error}")
 
