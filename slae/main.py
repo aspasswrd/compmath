@@ -2,16 +2,8 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
+from methods import AVAILABLE_METHODS
 from solver import LinearSystemSolver
-
-AVAILABLE_METHODS: Dict[str, str] = {
-    "lu": "LU-разложение",
-    "simple": "Метод простых итераций",
-    "jacobi": "Метод Якоби",
-    "seidel": "Метод Зейделя",
-    "steepest": "Метод наискорейшего спуска (требует SPD матрицу)",
-    "cg": "Метод сопряженных градиентов (требует SPD матрицу)",
-}
 
 
 def _read_system_from_input():
